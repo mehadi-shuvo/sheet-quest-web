@@ -18,3 +18,5 @@ The Chromium integration coverage starts its own development server and exercise
 ```bash
 npm run test:e2e
 ```
+
+The reusable practice-editor demonstration is available at `/practice/demo`. It uses the Employee Bonus fixture; enter `=B2*10%` in C2, then use **Reset workbook** to restore the seed.
