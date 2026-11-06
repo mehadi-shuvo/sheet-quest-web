@@ -14,7 +14,7 @@
 
 | Candidate | Current package/version checked | UI/grid + keyboard/clipboard | Formula engine / required functions | Snapshot / import-export | Commercial SaaS license conclusion | Result |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Univer core preset** | `@univerjs/presets` + `@univerjs/preset-sheets-core` `1.3.1` | Full browser sheet editor; React 18/19 integration is documented; client-only `useEffect` setup and disposal are official. Clipboard/browser interaction was not exercised without a browser harness. | Core preset contains the formula packages. Its installed type surface exposes `setFormula`, `getFormula`, `getValue`, `save`, and formula functions including SUM, AVERAGE, IF and SUMIF. Runtime browser results remain unverified. | `FWorkbook.save()` returns a workbook snapshot and `createWorkbook(snapshot)` reloads it. CSV/XLSX import/export is not approved from the core preset; official material places Exchange/file conversion in separately licensed Server/Pro scope. | **Approved for core only, subject to legal review.** Installed packages state Apache-2.0; Apache permits commercial use with license/NOTICE preservation. Do not assume Pro/Server/Exchange rights. | Recommended, but **PROPOSED** until real-browser formula and lifecycle results are captured. |
+| **Univer core preset** | `@univerjs/presets` + `@univerjs/preset-sheets-core` `1.3.1` | Full browser sheet editor. Chromium verification covers selection, keyboard editing, single/multi-cell clipboard interactions, reset, refresh, and route remount. | Core preset calculated SUM, AVERAGE, IF, SUMIF, and a reference update in Chromium. Formula text and raw numeric results were read separately. | `FWorkbook.save()` plus safe replacement through `disposeUnit(id)` followed by `createWorkbook(snapshot)` round-tripped formulas, formatting, workbook ID, and sheet ID. CSV/XLSX exchange remains outside this scope. | **Approved for core only, subject to legal review.** Installed packages state Apache-2.0; Apache permits commercial use with license/NOTICE preservation. Do not assume Pro/Server/Exchange rights. | Recommended and browser-verified for the M01 feasibility scope. |
 | **Handsontable** | `handsontable` `18.1.2` | Mature editable, virtualized data grid with React wrapper, keyboard navigation and clipboard-oriented grid behavior. Requires an evaluation or commercial key. | Formulas require a separately installed HyperFormula engine from v18 module usage. Its official docs show dependency recalculation through that plugin. | Supports grid data; spreadsheet workbook fidelity and XLSX round-trip are not an MVP-free assumption. Validate separately if licensed. | **Not approved.** Current commercial SaaS use requires a paid commercial license; the free key is for non-commercial/evaluation only. | Fallback only if budget approval and a license are obtained. |
 | **HyperFormula** | `hyperformula` `3.5.0` | No spreadsheet UI, keyboard navigation, clipboard handling, or editor. | Headless dependency graph and roughly 400 Excel-compatible formulas according to vendor pricing documentation; SUM, AVERAGE, IF, SUMIF are in scope but were not installed or executed. | Can represent sheets and formulas but is not a visual workbook editor or XLSX importer/exporter. | **Not approved.** Package metadata is GPL-3.0-only; a closed-source subscription SaaS needs the vendor's commercial license. | Useful only as a licensed backend/client calculation engine paired with a separate grid—adds integration work and cost. |
 
@@ -25,8 +25,8 @@
 - The official React guide explicitly supports React 18 and 19 and prescribes initialization inside `useEffect`, a child DOM container, and disposal during cleanup. The proof follows that lifecycle.
 - Installed `1.3.1` type declarations expose `FRange.setFormula()`, `FRange.getFormula()`, `FRange.getValue()`, `FWorkbook.save()`, and `FUniver.createWorkbook()`. This supports separating technique/formula text from displayed result and serializing a canonical workbook snapshot.
 - The package’s installed dependency graph includes formula and sheets UI modules at exactly `1.3.1`. All `@univerjs/*` packages must remain on the same version.
-- Production build emitted an isolated `/spikes/univer` route, but the largest emitted route chunk was about **41.6 MB uncompressed**. This is not an acceptable learner-route payload. A future integration must lazy-load the editor only inside the lesson experience and measure compressed production payload before accepting it.
-- Core formula behavior, editing, keyboard navigation, clipboard, reset, browser disposal, and restored snapshot behavior are **not browser-verified** in this environment; the available shell had no Chromium/Chrome/Playwright tooling.
+- The current production build emits approximately **12 MB** of uncompressed JavaScript chunks in total; its largest individual chunk is approximately **1.1 MB**. The spike route entry is about **6.2 KB**, but this is not a compressed route-payload budget. A future lesson integration must lazy-load the editor and establish a compressed payload budget.
+- Chromium/Playwright verification passed for formula calculation, numeric/raw-result separation, `0.00` display formatting, keyboard editing and navigation, single/multi-cell clipboard interactions, reset, native snapshot restore, page refresh, route unmount/remount, and invalid-formula handling (`#NAME?`). No page errors or duplicate-unit console errors were observed.
 
 ### Handsontable and HyperFormula
 
@@ -38,14 +38,13 @@
 
 `src/app/spikes/univer/page.tsx` mounts `UniverSpreadsheetSpike` in a Client Component. It:
 
-1. Creates a workbook and supplies values `5`, `10`, and `3`.
-2. Sets SUM, AVERAGE, IF, and SUMIF formulas through Univer’s Facade API.
-3. Reads formulas independently from calculated values.
-4. Serializes `workbook.save()` to JSON and creates a second workbook from that snapshot.
-5. Changes a referenced cell to exercise recalculation.
-6. Disposes the restored unit and disposes the Univer instance during React cleanup.
+1. Uses stable workbook/sheet IDs and creates SUM, AVERAGE, IF, SUMIF, and reference formulas from native workbook data.
+2. Waits for Univer's `Rendered` lifecycle stage, explicitly calculates, then waits for native formula results to be applied before reading them.
+3. Reads formula text, raw AVERAGE value (`4.333333333333333`), and formatted AVERAGE display (`4.33`) independently.
+4. Uses `FWorkbook.save()` for native snapshots. Restoration disposes the active unit before re-creating the snapshot with its retained ID, so it replaces rather than duplicates the workbook.
+5. Guards state updates with a lifecycle/disposal flag and operation version, allowing Strict Mode cleanup, repeated reset/restore, refresh, and remount without stale async mutation.
 
-The route compiled and was served at `/spikes/univer`, but this is only a server-route smoke test. Its client-side JSON result is deliberately not claimed as verified until a real browser runs it. No custom formula evaluator was substituted.
+`e2e/univer.spec.ts` verifies this in Playwright Chromium. No custom formula evaluator or hardcoded calculated strings were used.
 
 ## Licensing evidence and obligations
 
@@ -62,16 +61,16 @@ This is engineering due diligence, not legal advice. License terms and product p
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
 | Univer API/version churn and large client bundle | High | Pin matching versions, keep an adapter boundary, lazy-load only the lesson editor, and enforce a route-size budget. |
-| No browser verification of formulas/clipboard/lifecycle | High | Run the spike in Playwright/Chromium before M01-T02; assert result values and unmount/remount cleanly. |
+| Spreadsheet bundle size and formula compatibility beyond the tested set | High | Keep Univer client-only/lazy-loaded, define a supported-function corpus, and enforce a compressed payload budget before lesson rollout. |
 | Formula compatibility differs from Excel | High | Define a small supported-function contract, server-side validation corpus, and reject unsupported lesson features. |
 | XLSX/CSV exchange may be Pro/Server functionality | Medium | Persist Univer snapshots for MVP; defer import/export until its exact product/license scope is approved. |
 | Paid alternative/vendor lock-in | Medium | Do not install Handsontable/HyperFormula; retain a `WorkbookAdapter` boundary in M01-T05. |
 
 ## Recommendation and fallback
 
-Use the **Apache-2.0 Univer core preset `1.3.1`** for the next browser-verified M01 spike, behind a future `WorkbookAdapter`. It best matches the MVP’s need for an actual editable workbook and snapshot format without a paid dependency.
+Use the **Apache-2.0 Univer core preset `1.3.1`** for M01-T02, behind the future `WorkbookAdapter`. It satisfies the feasibility spike's editable-workbook, formula, clipboard, and native-snapshot requirements without a paid dependency.
 
-Do **not** call this ACCEPTED yet: browser-based function/recalculation/clipboard/reset tests and precise import/export boundary verification remain outstanding. If Univer fails those tests or cannot meet a constrained bundle budget, stop and seek budget approval for Handsontable plus HyperFormula commercial licensing rather than shipping a GPL/non-commercial configuration.
+This is not approval for Pro/Server/Exchange packages, XLSX interchange, broad Excel parity, or a production lesson payload. If a later supported-function corpus or compressed bundle budget fails, seek budget and legal approval for Handsontable plus HyperFormula rather than shipping GPL/non-commercial alternatives.
 
 ## Official references
 
@@ -94,4 +93,7 @@ Do **not** call this ACCEPTED yet: browser-based function/recalculation/clipboar
 - `npm run typecheck` → PASS.
 - `npm run build` → PASS; `/spikes/univer` generated as a route.
 - `PORT=3001 npm run dev` plus `curl http://127.0.0.1:3001/spikes/univer` → PASS; route compiled and returned HTTP 200.
-- Browser formula/clipboard/lifecycle smoke → **NOT RUN**; no browser automation executable was available.
+- `npm run test:e2e` (Chromium) → PASS when run as the two documented scenarios: formula/editor/clipboard/snapshot round trip and refresh/unmount/remount. It observed SUM `30`, AVERAGE raw `4.333333333333333` and display `4.33`, IF `Pass`, SUMIF `40`, G1 `15` → G2 `30`, and invalid-formula `#NAME?`; no duplicate-ID browser errors or uncaught page errors. The suite also covers repeated reset/restore operations.
+- `npm run lint` → PASS after the lifecycle and test changes.
+- `npm run typecheck` → PASS after the lifecycle and test changes.
+- `npm run build` → PASS; optimized build generated the isolated spike route.
