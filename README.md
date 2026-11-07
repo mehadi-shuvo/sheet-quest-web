@@ -22,3 +22,5 @@ npm run test:e2e
 The reusable practice-editor demonstration is available at `/practice/demo`. It uses the Employee Bonus fixture; enter `=B2*10%` in C2, then use **Reset workbook** to restore the seed.
 
 The formula compatibility workbook is available at `/practice/formulas`. Its documented, browser-verified MVP formula contract is in [docs/spreadsheet/formula-compatibility.md](docs/spreadsheet/formula-compatibility.md). It covers `SUM`, `AVERAGE`, `IF`, `SUMIF`, references, recalculation, reset, error observations, and formula-copy behavior; it does not claim general Excel compatibility.
+
+The canonical snapshot demonstration is at `/practice/snapshots`. It exports/imports only schema-v1 JSON; see [workbook snapshot documentation](docs/spreadsheet/workbook-snapshot.md).

@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import type { SpreadsheetExercise } from '../types/spreadsheet.types';
 import { SpreadsheetErrorBoundary } from './SpreadsheetErrorBoundary';
+import { SpreadsheetSnapshotPanel } from './SpreadsheetSnapshotPanel';
 import { SpreadsheetToolbar } from './SpreadsheetToolbar';
 
 const SpreadsheetEditor = dynamic(
@@ -14,12 +15,13 @@ const SpreadsheetEditor = dynamic(
   }
 );
 
-type SpreadsheetWorkspaceProps = { exercise: SpreadsheetExercise };
+type SpreadsheetWorkspaceProps = { enableSnapshots?: boolean; exercise: SpreadsheetExercise };
 
-export function SpreadsheetWorkspace({ exercise }: SpreadsheetWorkspaceProps) {
+export function SpreadsheetWorkspace({ enableSnapshots = false, exercise }: SpreadsheetWorkspaceProps) {
   const [editorKey, setEditorKey] = useState(0);
   const [ready, setReady] = useState(false);
   const [resetRequested, setResetRequested] = useState(false);
+  const [snapshotController, setSnapshotController] = useState<import('../types/spreadsheet.types').SpreadsheetSnapshotController | null>(null);
 
   return (
     <section aria-labelledby="practice-title" data-testid="spreadsheet-workspace">
@@ -48,10 +50,12 @@ export function SpreadsheetWorkspace({ exercise }: SpreadsheetWorkspaceProps) {
             setReady(true);
             setResetRequested(false);
           }}
+          onSnapshotController={enableSnapshots ? setSnapshotController : undefined}
           resetRequest={editorKey}
         />
       </SpreadsheetErrorBoundary>
       <p aria-live="polite">{ready ? 'Workbook ready for editing.' : 'Preparing workbook…'}</p>
+      {enableSnapshots ? <SpreadsheetSnapshotPanel controller={snapshotController} /> : null}
     </section>
   );
 }

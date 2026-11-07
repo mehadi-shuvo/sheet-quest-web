@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createSpreadsheetUniver } from '../lib/univer/create-univer';
 import {
   createSpreadsheetRuntime,
@@ -11,7 +11,12 @@ import {
   workbookSeedHasFormulas,
 } from '../lib/univer/workbook-lifecycle';
 import { resetWorkbook } from '../lib/univer/workbook-operations';
-import type { SpreadsheetEditorProps } from '../types/spreadsheet.types';
+import {
+  applyPreparedCanonicalWorkbookImport,
+  exportCanonicalWorkbook,
+  prepareCanonicalWorkbookImport,
+} from '../services/workbook-snapshot.service';
+import type { SpreadsheetEditorProps, SpreadsheetSnapshotController } from '../types/spreadsheet.types';
 import { toSpreadsheetError } from '../utils/spreadsheet-errors';
 
 type EditorStatus = 'error' | 'idle' | 'loading' | 'ready' | 'resetting';
@@ -108,5 +113,40 @@ export function useSpreadsheetEditor({ initialWorkbook, onError, onReady, readOn
     }
   }, [initialWorkbook, reportError, status]);
 
-  return { error, hostRef, isBusy: status === 'loading' || status === 'resetting', reset, status };
+  const exportWorkbook = useCallback(() => {
+      const runtime = runtimeRef.current;
+      if (!runtime || runtime.disposed) throw new Error('The spreadsheet editor is not ready for export.');
+      return exportCanonicalWorkbook(runtime);
+  }, []);
+
+  const importWorkbook = useCallback(async (json: string) => {
+      const runtime = runtimeRef.current;
+      if (!runtime || runtime.disposed || status === 'resetting') throw new Error('The spreadsheet editor is not ready for import.');
+      // Parsing and structural validation happen before changing the active workbook.
+      const candidate = prepareCanonicalWorkbookImport(json);
+      setError(null);
+      setStatus('resetting');
+      try {
+        const { operationVersion, seed, workbook } = applyPreparedCanonicalWorkbookImport(runtime, candidate);
+        const completed = workbookSeedHasFormulas(seed)
+          ? await waitForFormulaCalculation(runtime, workbook, operationVersion)
+          : await waitForRendered(runtime, operationVersion);
+        if (!completed) throw new Error('The imported workbook was superseded before it became ready.');
+        workbook.setEditable(!readOnlyRef.current);
+        setStatus('ready');
+        callbacksRef.current.onReady?.();
+      } catch (caught) {
+        if (!runtime.disposed) {
+          setStatus('ready');
+          throw toSpreadsheetError(caught, 'The workbook import failed.');
+        }
+      }
+  }, [status]);
+
+  const snapshotController = useMemo<SpreadsheetSnapshotController>(
+    () => ({ exportCanonicalWorkbook: exportWorkbook, importCanonicalWorkbook: importWorkbook }),
+    [exportWorkbook, importWorkbook]
+  );
+
+  return { error, hostRef, isBusy: status === 'loading' || status === 'resetting', reset, snapshotController, status };
 }

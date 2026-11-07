@@ -34,6 +34,12 @@ export type SpreadsheetEditorProps = {
   initialWorkbook: WorkbookSeed;
   onError?: (error: Error) => void;
   onReady?: () => void;
+  onSnapshotController?: (controller: SpreadsheetSnapshotController | null) => void;
   readOnly?: boolean;
   resetRequest?: number;
+};
+
+export type SpreadsheetSnapshotController = {
+  exportCanonicalWorkbook: () => string;
+  importCanonicalWorkbook: (json: string) => Promise<void>;
 };

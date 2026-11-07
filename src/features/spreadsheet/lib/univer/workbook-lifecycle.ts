@@ -93,6 +93,26 @@ export function replaceWorkbook(runtime: SpreadsheetRuntime, snapshot: WorkbookS
   return runtime.workbook;
 }
 
+export function replaceWorkbookSeed(runtime: SpreadsheetRuntime, seed: WorkbookSeed): FWorkbook {
+  const previousSnapshot = cloneSnapshot(runtime.workbook.save());
+  const previousId = runtime.workbook.getId();
+  if (!runtime.univerAPI.disposeUnit(previousId)) {
+    throw new Error('The current workbook could not be disposed before import.');
+  }
+
+  try {
+    runtime.workbook = runtime.univerAPI.createWorkbook(cloneWorkbookSeed(seed));
+    return runtime.workbook;
+  } catch (error) {
+    try {
+      runtime.workbook = runtime.univerAPI.createWorkbook(previousSnapshot);
+    } catch {
+      throw new Error('The import failed and the previous workbook could not be restored.');
+    }
+    throw error;
+  }
+}
+
 export function disposeSpreadsheetRuntime(runtime: SpreadsheetRuntime) {
   runtime.disposed = true;
   runtime.univer.dispose();

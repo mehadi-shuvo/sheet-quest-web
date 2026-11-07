@@ -5,8 +5,8 @@ import { useSpreadsheetEditor } from '../hooks/useSpreadsheetEditor';
 import type { SpreadsheetEditorProps } from '../types/spreadsheet.types';
 import { userFacingSpreadsheetError } from '../utils/spreadsheet-errors';
 
-export function SpreadsheetEditor({ className, initialWorkbook, onError, onReady, readOnly, resetRequest = 0 }: SpreadsheetEditorProps) {
-  const { error, hostRef, isBusy, reset, status } = useSpreadsheetEditor({
+export function SpreadsheetEditor({ className, initialWorkbook, onError, onReady, onSnapshotController, readOnly, resetRequest = 0 }: SpreadsheetEditorProps) {
+  const { error, hostRef, isBusy, reset, snapshotController, status } = useSpreadsheetEditor({
     initialWorkbook,
     onError,
     onReady,
@@ -19,6 +19,11 @@ export function SpreadsheetEditor({ className, initialWorkbook, onError, onReady
     lastResetRequestRef.current = resetRequest;
     void reset();
   }, [reset, resetRequest]);
+
+  useEffect(() => {
+    onSnapshotController?.(snapshotController);
+    return () => onSnapshotController?.(null);
+  }, [onSnapshotController, snapshotController]);
 
   return (
     <div className={className} data-testid="spreadsheet-editor" style={{ height: 520 }}>
