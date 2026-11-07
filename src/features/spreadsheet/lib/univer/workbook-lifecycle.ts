@@ -16,6 +16,7 @@ export type SpreadsheetRuntime = {
 };
 
 const FORMULA_READY_TIMEOUT_MS = 5_000;
+const RENDER_READY_TIMEOUT_MS = 5_000;
 
 export function cloneWorkbookSeed(seed: WorkbookSeed): WorkbookSeed {
   return JSON.parse(JSON.stringify(seed)) as WorkbookSeed;
@@ -53,11 +54,15 @@ export function createSpreadsheetRuntime(
 }
 
 export async function waitForRendered(runtime: SpreadsheetRuntime, operationVersion: number): Promise<boolean> {
+  const deadline = window.performance.now() + RENDER_READY_TIMEOUT_MS;
   while (
     !runtime.disposed &&
     runtime.operationVersion === operationVersion &&
     runtime.univerAPI.getCurrentLifecycleStage() < runtime.univerAPI.Enum.LifecycleStages.Rendered
   ) {
+    if (window.performance.now() >= deadline) {
+      throw new Error(`Univer did not reach the Rendered lifecycle stage within ${RENDER_READY_TIMEOUT_MS}ms.`);
+    }
     await nextFrame();
   }
 

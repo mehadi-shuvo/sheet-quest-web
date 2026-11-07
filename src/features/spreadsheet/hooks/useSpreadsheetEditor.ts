@@ -55,7 +55,9 @@ export function useSpreadsheetEditor({ initialWorkbook, onError, onReady, readOn
 
       void (async () => {
         try {
-          const ready = await waitForRendered(runtime, runtime.operationVersion);
+          const ready = workbookSeedHasFormulas(initialWorkbook)
+            ? await waitForFormulaCalculation(runtime, runtime.workbook, runtime.operationVersion)
+            : await waitForRendered(runtime, runtime.operationVersion);
           if (!ready) return;
 
           runtime.workbook.setEditable(!readOnlyRef.current);
@@ -89,12 +91,16 @@ export function useSpreadsheetEditor({ initialWorkbook, onError, onReady, readOn
     setError(null);
     setStatus('resetting');
     try {
+      if (workbookSeedHasFormulas(initialWorkbook)) {
+        const settled = await waitForFormulaCalculation(runtime, runtime.workbook, runtime.operationVersion);
+        if (!settled) return;
+      }
       const { operationVersion, workbook } = resetWorkbook(runtime);
-      workbook.setEditable(!readOnlyRef.current);
       const completed = workbookSeedHasFormulas(initialWorkbook)
         ? await waitForFormulaCalculation(runtime, workbook, operationVersion)
         : await waitForRendered(runtime, operationVersion);
       if (!completed) return;
+      workbook.setEditable(!readOnlyRef.current);
       setStatus('ready');
       callbacksRef.current.onReady?.();
     } catch (caught) {

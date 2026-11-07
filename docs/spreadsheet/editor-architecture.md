@@ -13,13 +13,17 @@ features/spreadsheet/
 │   ├── SpreadsheetWorkspace.tsx     # exercise title, instructions and editor composition
 │   ├── SpreadsheetToolbar.tsx       # confirmed reset control
 │   └── SpreadsheetErrorBoundary.tsx # render-time fallback only
-├── fixtures/employee-bonus.fixture.ts
+├── fixtures/
+│   ├── employee-bonus.fixture.ts
+│   └── formula-test-cases.ts       # typed formula corpus and derived native seed
 ├── hooks/useSpreadsheetEditor.ts    # React lifecycle and reset state
 ├── lib/univer/
 │   ├── create-univer.ts             # Univer-only initialization and CSS
 │   ├── workbook-lifecycle.ts        # runtime ownership, render/calculation waiting, disposal
 │   └── workbook-operations.ts       # native workbook replacement operations
-├── types/spreadsheet.types.ts       # public seed and component contracts
+├── types/
+│   ├── formula-test.types.ts        # formula expectations and recalculation contracts
+│   └── spreadsheet.types.ts         # public seed and component contracts
 └── utils/spreadsheet-errors.ts
 ```
 
@@ -43,9 +47,9 @@ type SpreadsheetEditorProps = {
 ## Lifecycle and reset
 
 1. The hook creates a private container and one Univer instance for a component mount.
-2. It creates exactly one workbook using a cloned seed, snapshots the initial state, and waits for Univer's `Rendered` lifecycle stage before reporting readiness.
-3. Every reset increments an operation version, disposes the active unit, then creates the original native snapshot. Native snapshots retain IDs, so disposal before recreation is required.
-4. Formula-bearing fixtures explicitly wait for Univer calculation results; all async work checks the operation version and disposal flag before updating React state.
+2. It creates exactly one workbook using a cloned seed, snapshots the initial state, and waits for Univer's `Rendered` lifecycle stage with a five-second deadline before reporting readiness. Formula-bearing seeds additionally trigger calculation and await native result application.
+3. Every formula reset first settles the active calculation, then increments an operation version, disposes the active unit, and creates the original native snapshot. Native snapshots retain IDs, so disposal before recreation is required.
+4. Formula-bearing replacements wait for calculation before becoming editable; all async work checks the operation version and disposal flag before updating React state.
 5. Unmount marks the runtime disposed before disposing Univer and removing the private container.
 
 This preserves the M01-T01 Strict Mode and duplicate-unit protections. Reset deliberately discards edits after a confirmation because user-edit persistence is outside M01-T02.
@@ -60,7 +64,7 @@ Initialization and reset errors are handled in the hook, reported through `onErr
 npm run test:e2e
 ```
 
-`e2e/spreadsheet-editor.spec.ts` runs the practice demo in real Chromium and covers initial content, selection, numeric/formula entry, recalculation, keyboard navigation, single/multi-cell clipboard, reset, refresh, navigation, and browser errors. The M01-T01 spike tests remain in `e2e/univer.spec.ts`.
+`e2e/spreadsheet-editor.spec.ts` runs the practice demo in real Chromium and covers initial content, selection, numeric/formula entry, recalculation, keyboard navigation, single/multi-cell clipboard, reset, refresh, navigation, and browser errors. `e2e/spreadsheet-formulas.spec.ts` runs the typed formula corpus through the actual Univer canvas, formula bar, and clipboard, covering required calculations, dependency updates, reset, raw formula preservation, reference translation, and observed errors. The M01-T01 spike tests remain in `e2e/univer.spec.ts`; [formula compatibility](formula-compatibility.md) defines the bounded supported contract.
 
 ## Performance and limitations
 
