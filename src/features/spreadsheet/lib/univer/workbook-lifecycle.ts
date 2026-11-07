@@ -113,7 +113,12 @@ export function replaceWorkbookSeed(runtime: SpreadsheetRuntime, seed: WorkbookS
   }
 }
 
-export function disposeSpreadsheetRuntime(runtime: SpreadsheetRuntime) {
+export function disposeSpreadsheetRuntime(runtime: SpreadsheetRuntime, onDisposed?: () => void) {
   runtime.disposed = true;
-  runtime.univer.dispose();
+  // Univer disposes an internal React root. Deferring that work until after the
+  // current React commit prevents a nested synchronous root unmount on cleanup.
+  window.setTimeout(() => {
+    runtime.univer.dispose();
+    onDisposed?.();
+  }, 0);
 }

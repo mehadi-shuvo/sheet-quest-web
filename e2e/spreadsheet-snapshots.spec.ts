@@ -59,6 +59,7 @@ test('round trips canonical workbook JSON through the real Univer editor', async
 
   await page.getByTestId('export-canonical-workbook').click();
   const jsonArea = page.getByTestId('canonical-workbook-json');
+  await expect.poll(() => jsonArea.inputValue()).not.toBe('');
   const exported = await jsonArea.inputValue();
   const parsed = JSON.parse(exported) as {
     schemaVersion: number;

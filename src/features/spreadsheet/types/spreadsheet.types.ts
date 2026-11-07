@@ -40,6 +40,6 @@ export type SpreadsheetEditorProps = {
 };
 
 export type SpreadsheetSnapshotController = {
-  exportCanonicalWorkbook: () => string;
+  exportCanonicalWorkbook: () => Promise<string>;
   importCanonicalWorkbook: (json: string) => Promise<void>;
 };

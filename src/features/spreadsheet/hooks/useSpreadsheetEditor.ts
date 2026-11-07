@@ -13,9 +13,10 @@ import {
 import { resetWorkbook } from '../lib/univer/workbook-operations';
 import {
   applyPreparedCanonicalWorkbookImport,
-  exportCanonicalWorkbook,
   prepareCanonicalWorkbookImport,
 } from '../services/workbook-snapshot.service';
+import { UniverWorkbookAdapter } from '@/adapters/univer-workbook.adapter';
+import { parseCanonicalWorkbook, serializeCanonicalWorkbook } from '../domain/workbook-validation';
 import type { SpreadsheetEditorProps, SpreadsheetSnapshotController } from '../types/spreadsheet.types';
 import { toSpreadsheetError } from '../utils/spreadsheet-errors';
 
@@ -77,9 +78,9 @@ export function useSpreadsheetEditor({ initialWorkbook, onError, onReady, readOn
     }
 
     return () => {
-      if (runtime) disposeSpreadsheetRuntime(runtime);
+      if (runtime) disposeSpreadsheetRuntime(runtime, () => container.remove());
+      else container.remove();
       if (runtimeRef.current === runtime) runtimeRef.current = null;
-      container.remove();
     };
   }, [initialWorkbook, reportError]);
 
@@ -113,16 +114,9 @@ export function useSpreadsheetEditor({ initialWorkbook, onError, onReady, readOn
     }
   }, [initialWorkbook, reportError, status]);
 
-  const exportWorkbook = useCallback(() => {
-      const runtime = runtimeRef.current;
-      if (!runtime || runtime.disposed) throw new Error('The spreadsheet editor is not ready for export.');
-      return exportCanonicalWorkbook(runtime);
-  }, []);
-
-  const importWorkbook = useCallback(async (json: string) => {
+  const importCanonicalJson = useCallback(async (json: string) => {
       const runtime = runtimeRef.current;
       if (!runtime || runtime.disposed || status === 'resetting') throw new Error('The spreadsheet editor is not ready for import.');
-      // Parsing and structural validation happen before changing the active workbook.
       const candidate = prepareCanonicalWorkbookImport(json);
       setError(null);
       setStatus('resetting');
@@ -142,6 +136,19 @@ export function useSpreadsheetEditor({ initialWorkbook, onError, onReady, readOn
         }
       }
   }, [status]);
+
+  const adapter = useMemo(
+    () => new UniverWorkbookAdapter({ importJson: importCanonicalJson, reset, runtime: () => runtimeRef.current }),
+    [importCanonicalJson, reset]
+  );
+
+  const exportWorkbook = useCallback(() => {
+      return adapter.exportWorkbook().then(serializeCanonicalWorkbook);
+  }, [adapter]);
+
+  const importWorkbook = useCallback(async (json: string) => {
+      await adapter.importWorkbook(parseCanonicalWorkbook(json));
+  }, [adapter]);
 
   const snapshotController = useMemo<SpreadsheetSnapshotController>(
     () => ({ exportCanonicalWorkbook: exportWorkbook, importCanonicalWorkbook: importWorkbook }),

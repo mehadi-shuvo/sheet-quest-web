@@ -2,7 +2,7 @@
 
 ## Scope
 
-`src/features/spreadsheet` is the client-only editor module used by practice routes. It supports an editable native Univer workbook, reset to a supplied seed, error states, and an exercise-oriented workspace. It does not grade work, persist snapshots, or provide the future `WorkbookAdapter`.
+`src/features/spreadsheet` is the client-only editor module used by practice routes. It supports an editable native Univer workbook, reset, canonical snapshots, error states, and an exercise-oriented workspace. Lesson-facing workbook operations use the bounded `WorkbookAdapter` contract; Univer remains an implementation detail.
 
 ## Module layout
 
@@ -50,7 +50,7 @@ type SpreadsheetEditorProps = {
 2. It creates exactly one workbook using a cloned seed, snapshots the initial state, and waits for Univer's `Rendered` lifecycle stage with a five-second deadline before reporting readiness. Formula-bearing seeds additionally trigger calculation and await native result application.
 3. Every formula reset first settles the active calculation, then increments an operation version, disposes the active unit, and creates the original native snapshot. Native snapshots retain IDs, so disposal before recreation is required.
 4. Formula-bearing replacements wait for calculation before becoming editable; all async work checks the operation version and disposal flag before updating React state.
-5. Unmount marks the runtime disposed before disposing Univer and removing the private container.
+5. Unmount marks the runtime disposed immediately, then defers Univer's internal React-root disposal and container removal until React's current commit has completed.
 
 This preserves the M01-T01 Strict Mode and duplicate-unit protections. Reset deliberately discards edits after a confirmation because user-edit persistence is outside M01-T02.
 
@@ -70,4 +70,4 @@ npm run test:e2e
 
 In the M01-T02 production build, the practice-route entry is approximately **128 KB** uncompressed and the dynamically imported editor chunk is approximately **41.6 MB**; all emitted JavaScript chunks total approximately **114 MB** uncompressed. Chromium readiness measured from a warm development reload to `spreadsheet-editor-ready` was approximately **2.26 seconds**. A first development visit was approximately **10.0 seconds**, including Next development compilation, so it is not a runtime baseline. The editor remains client-only and dynamically imported, but compressed production transfer size must be measured and budgeted before rollout.
 
-Only the tested Univer core feature set is supported. XLSX exchange, collaboration, server-side validation, persistence, broad Excel parity, and `WorkbookAdapter` are intentionally deferred. M01-T05 should introduce the adapter at the `SpreadsheetEditor`/seed boundary rather than exposing Univer APIs to lesson UI.
+Only the tested Univer core feature set is supported. XLSX exchange, collaboration, server-side validation, persistence, and broad Excel parity remain deferred. See [WorkbookAdapter](workbook-adapter.md) and the [performance baseline](performance-baseline.md) for the bounded contract and release risks.

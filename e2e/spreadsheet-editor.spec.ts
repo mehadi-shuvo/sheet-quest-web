@@ -79,7 +79,7 @@ test.describe('reusable spreadsheet editor', () => {
     await expect.poll(() => copySelectedCell(page)).toBe('');
     await expect(page.locator('p[role="alert"]')).toHaveCount(0);
     expect(pageErrors).toEqual([]);
-    expect(consoleErrors.filter((message) => /same unit id|UniverInstanceService/i.test(message))).toEqual([]);
+    expect(consoleErrors.filter((message) => /same unit id|UniverInstanceService|synchronously unmount a root/i.test(message))).toEqual([]);
     await context.close();
   });
 
@@ -100,6 +100,6 @@ test.describe('reusable spreadsheet editor', () => {
 
     await expect(page.getByTestId('spreadsheet-editor-loading')).toHaveCount(0);
     await expect(page.locator('p[role="alert"]')).toHaveCount(0);
-    expect(failures.filter((message) => /same unit id|UniverInstanceService/i.test(message))).toEqual([]);
+    expect(failures.filter((message) => /same unit id|UniverInstanceService|synchronously unmount a root/i.test(message))).toEqual([]);
   });
 });

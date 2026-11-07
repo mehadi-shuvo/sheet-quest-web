@@ -21,12 +21,14 @@ export function SpreadsheetSnapshotPanel({ controller }: SpreadsheetSnapshotPane
           data-testid="export-canonical-workbook"
           disabled={!controller}
           onClick={() => {
-            try {
-              setJson(controller?.exportCanonicalWorkbook() ?? '');
+            void (async () => {
+              try {
+                setJson((await controller?.exportCanonicalWorkbook()) ?? '');
               setMessage('Canonical workbook exported.');
-            } catch (error) {
-              setMessage(error instanceof Error ? error.message : 'Workbook export failed.');
-            }
+              } catch (error) {
+                setMessage(error instanceof Error ? error.message : 'Workbook export failed.');
+              }
+            })();
           }}
         >
           Export canonical JSON

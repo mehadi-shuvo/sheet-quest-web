@@ -24,3 +24,5 @@ The reusable practice-editor demonstration is available at `/practice/demo`. It 
 The formula compatibility workbook is available at `/practice/formulas`. Its documented, browser-verified MVP formula contract is in [docs/spreadsheet/formula-compatibility.md](docs/spreadsheet/formula-compatibility.md). It covers `SUM`, `AVERAGE`, `IF`, `SUMIF`, references, recalculation, reset, error observations, and formula-copy behavior; it does not claim general Excel compatibility.
 
 The canonical snapshot demonstration is at `/practice/snapshots`. It exports/imports only schema-v1 JSON; see [workbook snapshot documentation](docs/spreadsheet/workbook-snapshot.md).
+
+Lesson code must use the documented [WorkbookAdapter contract](docs/spreadsheet/workbook-adapter.md), not Univer APIs or native snapshots. The current [performance baseline](docs/spreadsheet/performance-baseline.md) records the large lazy-editor bundle as a release risk.
